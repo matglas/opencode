@@ -66,6 +66,14 @@ export namespace FSUtil {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem
 
+      // macOS privacy denials arrive as Unknown with an EPERM cause.
+      const isAccessDenied = (error: PlatformError) =>
+        error.reason._tag === "PermissionDenied" ||
+        (error.reason._tag === "Unknown" &&
+          error.reason.cause instanceof Error &&
+          "code" in error.reason.cause &&
+          (error.reason.cause.code === "EPERM" || error.reason.cause.code === "EACCES"))
+
       const existsSafe = Effect.fn("FileSystem.existsSafe")(function* (path: string) {
         return yield* fs.exists(path).pipe(Effect.orElseSucceed(() => false))
       })
@@ -73,7 +81,7 @@ export namespace FSUtil {
       const readFileStringSafe = Effect.fn("FileSystem.readFileStringSafe")(function* (path: string) {
         return yield* fs.readFileString(path).pipe(
           Effect.catchReason("PlatformError", "NotFound", () => Effect.undefined),
-          Effect.catchReason("PlatformError", "PermissionDenied", () => Effect.undefined),
+          Effect.catchIf(isAccessDenied, () => Effect.undefined),
         )
       })
 
@@ -106,6 +114,7 @@ export namespace FSUtil {
         const resolved = path.resolve(windowsPath(input))
         return yield* fs.realPath(resolved).pipe(
           Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(resolved)),
+          Effect.catchIf(isAccessDenied, () => Effect.succeed(resolved)),
           Effect.orDie,
         )
       })
@@ -173,7 +182,7 @@ export namespace FSUtil {
                 ? yield* isFile(search)
                 : options.type === "directory"
                   ? yield* isDir(search)
-                  : yield* fs.exists(search)
+                  : yield* existsSafe(search)
             if (found) {
               result.push(search)
               if (options.mode === "first") return result
@@ -259,7 +268,7 @@ export namespace FSUtil {
     try {
       return normalizePath(realpathSync(resolved))
     } catch (e: any) {
-      if (e?.code === "ENOENT" || e?.code === "ENOTDIR") return normalizePath(resolved)
+      if (e?.code === "ENOENT" || e?.code === "ENOTDIR" || e?.code === "EPERM" || e?.code === "EACCES") return normalizePath(resolved)
       throw e
     }
   }
