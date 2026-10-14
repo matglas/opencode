@@ -4,7 +4,7 @@ import { Plugin } from "@opencode/core/plugin"
 import { LocationServiceMap } from "@opencode/core/location-services"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
-import { LocationNotFoundError, InvalidRequestError, ServiceUnavailableError } from "@opencode/protocol/errors"
+import { ForbiddenError, LocationNotFoundError, InvalidRequestError, ServiceUnavailableError } from "@opencode/protocol/errors"
 import { Effect, Layer, Schema } from "effect"
 import { HttpServerRequest } from "effect/http"
 import { HttpApiMiddleware } from "effect/http-api"
@@ -14,23 +14,29 @@ export type LocationServices = Layer.Success<ReturnType<(typeof LocationServiceM
 
 export class LocationMiddleware extends HttpApiMiddleware.Service<LocationMiddleware, { provides: LocationServices }>()(
   "@opencode/HttpApiLocation",
-  { error: [LocationNotFoundError] },
+  { error: [LocationNotFoundError, ForbiddenError] },
 ) {}
 
 export function locationErrors<A, E, R>(effect: Effect.Effect<A, E, R>) {
   return effect.pipe(
     Effect.catchIf(
-      (error): error is Extract<E, FileSystem.DirectoryNotFoundError> =>
-        error instanceof FileSystem.DirectoryNotFoundError,
-      (error) =>
-        Effect.fail(
-          new LocationNotFoundError({
-            location: { directory: error.directory },
-            message: `Location not found: ${error.directory}`,
-          }),
-        ),
+      (
+        error,
+      ): error is Extract<E, FileSystem.DirectoryNotFoundError | FileSystem.DirectoryAccessDeniedError> =>
+        error instanceof FileSystem.DirectoryNotFoundError ||
+        error instanceof FileSystem.DirectoryAccessDeniedError,
+      (error) => Effect.fail(locationError(error)),
     ),
   )
+}
+
+function locationError(error: FileSystem.DirectoryNotFoundError | FileSystem.DirectoryAccessDeniedError) {
+  if (error instanceof FileSystem.DirectoryNotFoundError)
+    return new LocationNotFoundError({
+      location: { directory: error.directory },
+      message: `Location not found: ${error.directory}`,
+    })
+  return new ForbiddenError({ message: `Access denied to directory: ${error.directory}` })
 }
 
 export const awaitPlugins = Plugin.awaitActivation.pipe(

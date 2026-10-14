@@ -114,7 +114,7 @@ const nodes = [
 export const graph = LayerNode.group(nodes)
 
 export type Services = LayerNode.Output<typeof graph>
-export type Error = FileSystem.DirectoryNotFoundError
+export type Error = FileSystem.DirectoryError
 
 export interface Options {
   // Plugins this instance is born with; empty and absent are equivalent.
@@ -157,14 +157,17 @@ export function layer(ref: Location.Ref, options: Options = {}): Layer.Layer<Ser
   ]
 
   return LayerNode.compile(graph, { replacements, shared: Node.tags.values.global }).pipe(
-    // A missing directory is expected; other instance boot failures remain defects.
+    // A missing or unreadable directory is an expected client condition; other
+    // instance boot failures remain defects.
     Layer.catchCause(
       (cause): Layer.Layer<Services, Error> =>
         Layer.unwrap(
           Effect.failCause(cause).pipe(
             Effect.catch(
               (error): Effect.Effect<never, Error> =>
-                error instanceof FileSystem.DirectoryNotFoundError ? Effect.fail(error) : Effect.die(error),
+                error instanceof FileSystem.DirectoryNotFoundError || error instanceof FileSystem.DirectoryAccessDeniedError
+                  ? Effect.fail(error)
+                  : Effect.die(error),
             ),
           ),
         ),

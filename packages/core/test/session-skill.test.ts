@@ -69,7 +69,7 @@ const locations = makeGlobalNode({
               ),
             ),
             Layer.mock(Plugin.Service, { awaitActivation: Effect.void }),
-          ) as unknown as Layer.Layer<LocationServices, FileSystem.DirectoryNotFoundError>,
+          ) as unknown as Layer.Layer<LocationServices, FileSystem.DirectoryError>,
         { idleTimeToLive: Duration.infinity },
       )
     }),

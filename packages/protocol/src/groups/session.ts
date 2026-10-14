@@ -19,6 +19,7 @@ import { Base64Url } from "effect/encoding"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiMiddleware, HttpApiSchema, OpenApi } from "effect/http-api"
 import {
   ConflictError,
+  ForbiddenError,
   LocationNotFoundError,
   CommandExecutionError,
   CommandNotFoundError,
@@ -593,7 +594,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S, FormI ext
           }),
         }),
         success: Schema.Struct({ data: Schema.Array(FileDiff.Info) }),
-        error: [InvalidRequestError, MessageNotFoundError, SessionNotFoundError, UnknownError, LocationNotFoundError],
+        error: [InvalidRequestError, MessageNotFoundError, SessionNotFoundError, UnknownError, LocationNotFoundError, ForbiddenError],
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "session.diff",

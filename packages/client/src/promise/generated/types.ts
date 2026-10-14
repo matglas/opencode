@@ -2664,6 +2664,10 @@ export type UnauthorizedError = { readonly _tag: "UnauthorizedError"; readonly m
 export const isUnauthorizedError = (value: unknown): value is UnauthorizedError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "UnauthorizedError"
 
+export type ForbiddenError = { readonly _tag: "ForbiddenError"; readonly message: string }
+export const isForbiddenError = (value: unknown): value is ForbiddenError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ForbiddenError"
+
 export type LocationNotFoundError = {
   readonly _tag: "LocationNotFoundError"
   readonly location: { readonly directory: string }
@@ -2872,10 +2876,6 @@ export const isRpcInternalError = (value: unknown): value is RpcInternalError =>
 export type PtyNotFoundError = { readonly _tag: "PtyNotFoundError"; readonly ptyID: string; readonly message: string }
 export const isPtyNotFoundError = (value: unknown): value is PtyNotFoundError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "PtyNotFoundError"
-
-export type ForbiddenError = { readonly _tag: "ForbiddenError"; readonly message: string }
-export const isForbiddenError = (value: unknown): value is ForbiddenError =>
-  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ForbiddenError"
 
 export type ShellNotFoundError = { readonly _tag: "ShellNotFoundError"; readonly id: string; readonly message: string }
 export const isShellNotFoundError = (value: unknown): value is ShellNotFoundError =>
